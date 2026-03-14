@@ -1,6 +1,7 @@
 
 import './App.css';
 import CheckOut from './customer/components/checkOut/CheckOut';
+import Cart from './customer/components/cart/Cart';
 import Navigation from './customer/components/navigation/Navigation';
 import HomePage from './customer/pages/homePage/HomePage';
 import { BrowserRouter } from "react-router-dom";
