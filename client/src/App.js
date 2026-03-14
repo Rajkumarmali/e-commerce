@@ -1,17 +1,21 @@
 
 import './App.css';
+import CheckOut from './customer/components/checkOut/CheckOut';
 import Navigation from './customer/components/navigation/Navigation';
 import HomePage from './customer/pages/homePage/HomePage';
-
+import { BrowserRouter } from "react-router-dom";
 
 function App() {
   return (
-    <div className="App">
-      <Navigation />
-      <div>
-        <HomePage />
+    <BrowserRouter>
+      <div className="App">
+        <Navigation />
+        <div>
+          {/* <HomePage /> */}
+          <CheckOut />
+        </div>
       </div>
-    </div>
+    </BrowserRouter>
   );
 }
 
