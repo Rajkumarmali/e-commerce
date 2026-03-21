@@ -1,10 +1,14 @@
 import { Grid } from "@mui/material";
 import React from "react";
 import AdjustIcon from '@mui/icons-material/Adjust';
+import { useNavigate } from "react-router-dom";
 
 const OrderCard = () => {
+    const navigate = useNavigate();
+
+
     return (
-        <div >
+        <div onClick={() => navigate(`/account/order/${5}`)}>
             <Grid
                 container
                 alignItems="center"
