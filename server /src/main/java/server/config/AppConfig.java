@@ -1,4 +1,4 @@
-package config;
+package server.config;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.jspecify.annotations.Nullable;
