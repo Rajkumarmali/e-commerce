@@ -1,305 +1,487 @@
-# Model Package
+# Authentication APIs
 
-This package contains all the JPA entity models that represent the core data structures for the e-commerce application.
+This document provides comprehensive documentation for the authentication APIs in the e-commerce application.
 
 ## Overview
 
-The model package defines the database schema and entity relationships for the e-commerce platform using Spring Data JPA and Hibernate. All entities are properly annotated with JPA annotations and include relationships, validations, and business logic.
+The authentication system provides secure user registration and login functionality using JWT (JSON Web Tokens) for stateless authentication. The API follows RESTful conventions and integrates with Spring Security for robust security implementation.
 
-## Entity Relationship Diagram
+## Base URL
 
 ```
-User (1) -----> (N) Address
-User (1) -----> (N) PaymentInformation
-User (1) -----> (N) Rating
-User (1) -----> (N) Review
-
-Product (1) -----> (N) Rating
-Product (1) -----> (N) Review
-Product (N) -----> (1) Category
-Product (1) -----> (N) Size (Embedded)
-
-Category (1) -----> (N) Product
-Category (1) -----> (N) Category (Self-referencing)
+http://localhost:8080/auth
 ```
 
-## Entity Classes
+## Security Features
 
-### 1. User.java
-**Core user entity** representing registered customers in the system.
+- **JWT Token Authentication**: Stateless authentication using JWT tokens
+- **Password Encryption**: BCrypt password hashing
+- **Email Validation**: Unique email verification during registration
+- **Spring Security Integration**: Comprehensive security framework
+- **Custom User Details Service**: User authentication and authorization
 
-**Fields:**
-- `id` (Long): Primary key with auto-generation
-- `firstName`, `lastName` (String): User's personal information
-- `email` (String): Unique email identifier
-- `password` (String): Encrypted password
-- `role` (String): User role (e.g., "USER", "ADMIN")
-- `mobile` (String): Contact number
-- `createdAt` (LocalDateTime): Account creation timestamp
+## API Endpoints
 
-**Relationships:**
-- `@OneToMany` with Address: User can have multiple shipping addresses
-- `@OneToMany` with Rating: User can rate multiple products
-- `@OneToMany` with Review: User can write multiple reviews
-- `@ElementCollection` PaymentInformation: Embedded payment methods
+### 1. User Registration (Sign Up)
 
-**Key Features:**
-- Password is stored in encrypted format
-- Supports multiple addresses for shipping
-- Tracks user ratings and reviews
-- Role-based access control support
+**Endpoint:** `POST /auth/signup`
 
-### 2. Product.java
-**Central product entity** representing items available for purchase.
+**Description:** Creates a new user account and returns a JWT token for immediate authentication.
 
-**Fields:**
-- `id` (Long): Primary key
-- `title` (String): Product name
-- `description` (String): Detailed product description
-- `price` (int): Base price in currency units
-- `discountPresent` (int): Discount percentage
-- `quantity` (int): Available stock
-- `brand` (String): Product brand
-- `color` (String): Product color
-- `imageUrl` (String): Product image URL
-- `numRatings` (int): Total number of ratings
-- `createdAt` (LocalDateTime): Product creation timestamp
+**Request Body:**
 
-**Relationships:**
-- `@ManyToOne` with Category: Product belongs to one category
-- `@OneToMany` with Rating: Product can have multiple ratings
-- `@OneToMany` with Review: Product can have multiple reviews
-- `@ElementCollection` Size: Product available in multiple sizes
+```json
+{
+  "firstName": "John",
+  "lastName": "Doe",
+  "email": "john.doe@example.com",
+  "password": "securePassword123"
+}
+```
 
-**Key Features:**
-- Supports discount pricing
-- Inventory management with quantity tracking
-- Multi-size support for clothing/products
-- Rating and review system integration
+**Request Fields:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| firstName | String | Yes | User's first name |
+| lastName | String | Yes | User's last name |
+| email | String | Yes | Unique email address |
+| password | String | Yes | Plain text password (will be encrypted) |
 
-### 3. Category.java
-**Hierarchical category entity** for product classification.
+**Success Response (201 Created):**
 
-**Fields:**
-- `id` (Long): Primary key
-- `name` (String): Category name (max 50 characters, not null)
-- `level` (int): Category hierarchy level
+```json
+{
+  "jwt": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqb2huLmRvZUBleGFtcGxlLmNvbSIsImlhdCI6MTY0NjI0MjAwMCwiZXhwIjoxNjQ2MzI4NDAwfQ.signature",
+  "message": "SignUp successfully"
+}
+```
 
-**Relationships:**
-- `@ManyToOne` with Category: Self-referencing parent category
-- `@OneToMany` with Product: Category contains multiple products
+**Error Responses:**
 
-**Key Features:**
-- Supports hierarchical category structure
-- Validation on category name
-- Eager fetching for parent category
-- Level-based organization
+**400 Bad Request** - Email already exists:
 
-### 4. Address.java
-**Shipping address entity** for user delivery locations.
+```json
+{
+  "timestamp": "2024-01-01T12:00:00.000+00:00",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Email is Already used Another Account",
+  "path": "/auth/signup"
+}
+```
 
-**Fields:**
-- `id` (Long): Primary key
-- `firstName`, `lastName` (String): Recipient name
-- `streetAddress` (String): Street address line
-- `city` (String): City name
-- `state` (String): State/province
-- `zipCode` (String): Postal code
-- `mobile` (String): Contact number for delivery
+**422 Unprocessable Entity** - Validation errors:
 
-**Relationships:**
-- `@ManyToOne` with User: Address belongs to one user
+```json
+{
+  "timestamp": "2024-01-01T12:00:00.000+00:00",
+  "status": 422,
+  "error": "Unprocessable Entity",
+  "message": "Validation failed for object='user'. Error count: 1",
+  "errors": [
+    {
+      "field": "email",
+      "message": "Email should be valid"
+    }
+  ]
+}
+```
 
-**Key Features:**
-- Complete address information
-- Separate contact number for delivery
-- Bidirectional relationship with User
-- JSON ignore on user reference to prevent circular references
+### 2. User Login (Sign In)
 
-### 5. Rating.java
-**Product rating entity** for user rating system.
+**Endpoint:** `POST /auth/signin`
 
-**Fields:**
-- `id` (Long): Primary key
-- `rating` (double): Numerical rating value
-- `createtAt` (LocalDateTime): Rating timestamp
+**Description:** Authenticates a user and returns a JWT token for subsequent API calls.
 
-**Relationships:**
-- `@ManyToOne` with User: Rating given by one user
-- `@ManyToOne` with Product: Rating for one product
+**Request Body:**
 
-**Key Features:**
-- Double precision rating values
-- Composite relationship with user and product
-- Timestamp tracking
-- Prevents circular JSON serialization
+```json
+{
+  "email": "john.doe@example.com",
+  "password": "securePassword123"
+}
+```
 
-### 6. Review.java
-**Product review entity** for detailed user feedback.
+**Request Fields:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| email | String | Yes | Registered email address |
+| password | String | Yes | User password |
 
-**Fields:**
-- `id` (Long): Primary key
-- `review` (String): Text content of the review
-- `createdAt` (LocalDateTime): Review creation timestamp
+**Success Response (201 Created):**
 
-**Relationships:**
-- `@ManyToOne` with User: Review written by one user
-- `@ManyToOne` with Product: Review for one product
+```json
+{
+  "jwt": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqb2huLmRvZUBleGFtcGxlLmNvbSIsImlhdCI6MTY0NjI0MjAwMCwiZXhwIjoxNjQ2MzI4NDAwfQ.signature",
+  "message": "SingIn successfully"
+}
+```
 
-**Key Features:**
-- Text-based feedback system
-- Separate from rating system
-- User and product association
-- Timestamp tracking
+**Error Responses:**
 
-### 7. Size.java
-**Product size entity** for size-specific inventory.
+**401 Unauthorized** - Invalid credentials:
 
-**Fields:**
-- `name` (String): Size identifier (e.g., "S", "M", "L", "XL")
-- `quantity` (int): Quantity available for this size
+```json
+{
+  "timestamp": "2024-01-01T12:00:00.000+00:00",
+  "status": 401,
+  "error": "Unauthorized",
+  "message": "Invalid username or password",
+  "path": "/auth/signin"
+}
+```
 
-**Key Features:**
-- Embedded in Product entity
-- Size-specific inventory tracking
-- Simple and lightweight structure
-- No JPA annotations (embeddable)
+**404 Not Found** - User not found:
 
-### 8. PaymentInformation.java
-**Payment method entity** for user payment options.
+```json
+{
+  "timestamp": "2024-01-01T12:00:00.000+00:00",
+  "status": 404,
+  "error": "Not Found",
+  "message": "user not found with email",
+  "path": "/auth/signin"
+}
+```
 
-**Fields:**
-- `cardHolderName` (String): Name on card
-- `cardName` (String): Card type/name
-- `expirationDate` (LocalDate): Card expiration date
-- `cvv` (String): Card security code
+## JWT Token Usage
 
-**Key Features:**
-- Embedded in User entity
-- Secure payment information storage
-- Expiration date tracking
-- Multiple payment methods support
+### Header Format
+
+Include the JWT token in the Authorization header for all protected API calls:
+
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
+**Example:**
+
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqb2huLmRvZUBleGFtcGxlLmNvbSIsImlhdCI6MTY0NjI0MjAwMCwiZXhwIjoxNjQ2MzI4NDAwfQ.signature
+```
+
+### Token Expiration
+
+- **Duration**: 846,000,000 milliseconds (~9.8 days)
+- **Automatic Renewal**: Client should handle token refresh before expiration
+
+## Architecture Components
+
+### 1. AuthController
+
+**Main REST controller** handling authentication endpoints.
+
+**Responsibilities:**
+
+- User registration (`/signup`)
+- User authentication (`/signin`)
+- JWT token generation
+- Input validation
+- Error handling
+
+### 2. CustomeUserServiceImplementation
+
+**Custom UserDetailsService** implementation for Spring Security.
+
+**Responsibilities:**
+
+- Load user by email
+- Provide user details for authentication
+- Integrate with Spring Security framework
+
+### 3. JWT Provider
+
+**Token management service** (located in config package).
+
+**Responsibilities:**
+
+- Generate JWT tokens
+- Parse and validate tokens
+- Extract user claims
+
+### 4. Password Encoder
+
+**BCrypt password encoder** bean (configured in AppConfig).
+
+**Responsibilities:**
+
+- Encrypt passwords during registration
+- Verify passwords during login
+- Secure password storage
+
+## Data Transfer Objects (DTOs)
+
+### LoginRequest
+
+**Request DTO** for user login.
+
+```java
+public class LoginRequest {
+    private String email;
+    private String password;
+}
+```
+
+### AuthResponse
+
+**Response DTO** for authentication operations.
+
+```java
+public class AuthResponse {
+    private String jwt;
+    private String message;
+}
+```
+
+## Exception Handling
+
+### UserException
+
+**Custom exception** for user-related errors.
+
+**Thrown When:**
+
+- Email already exists during registration
+- User validation fails
+- User not found
+
+### BadCredentialsException
+
+**Spring Security exception** for authentication failures.
+
+**Thrown When:**
+
+- Invalid username/email
+- Incorrect password
+- Account authentication issues
+
+## Security Flow
+
+### Registration Flow
+
+1. Client sends user data to `/auth/signup`
+2. Server validates email uniqueness
+3. Password is encrypted using BCrypt
+4. User is saved to database
+5. JWT token is generated
+6. Token and success message returned to client
+
+### Login Flow
+
+1. Client sends credentials to `/auth/signin`
+2. Server loads user by email
+3. Password is verified against encrypted hash
+4. Authentication is established in SecurityContext
+5. JWT token is generated
+6. Token and success message returned to client
+
+### Protected API Flow
+
+1. Client includes JWT token in Authorization header
+2. JwtValidator filter intercepts request
+3. Token is validated and parsed
+4. User authentication is set in SecurityContext
+5. Request proceeds to protected endpoint
+6. Response returned to client
 
 ## Database Schema
 
-The entities generate the following database tables:
+### User Table
 
-- `user` - User accounts and profiles
-- `product` - Product catalog
-- `category` - Product categories
-- `address` - User shipping addresses
-- `rating` - Product ratings
-- `review` - Product reviews
-- `payment_information` - User payment methods
-- `size` - Product sizes (embedded collection)
-
-## JPA Annotations Used
-
-### Core Annotations
-- `@Entity` - Marks class as JPA entity
-- `@Id` - Primary key field
-- `@GeneratedValue` - Auto-generation strategy
-- `@Column` - Column customization
-- `@Table` - Table name customization
-
-### Relationship Annotations
-- `@OneToMany` - One-to-many relationship
-- `@ManyToOne` - Many-to-one relationship
-- `@JoinColumn` - Foreign key column specification
-- `@Embedded` - Embedded object
-- `@ElementCollection` - Collection of embeddable objects
-
-### Cascade and Fetching
-- `cascade = CascadeType.ALL` - Cascade all operations
-- `orphanRemoval = true` - Remove orphaned entities
-- `fetch = FetchType.EAGER` - Eager loading strategy
-
-### JSON Handling
-- `@JsonIgnore` - Prevent circular references in JSON serialization
-
-## Validation
-
-### Built-in Validations
-- `@NotNull` - Field cannot be null
-- `@Size(max = 50)` - String length validation
-
-## Data Types Used
-
-- **Long** - Primary keys and IDs
-- **String** - Text fields and names
-- **int** - Numeric values (price, quantity, ratings)
-- **double** - Decimal ratings
-- **LocalDateTime** - Timestamps with date and time
-- **LocalDate** - Date-only fields
-- **Collection Types** - Lists and Sets for relationships
-
-## Best Practices Implemented
-
-1. **Proper Relationships**: All entities have correctly defined relationships
-2. **Cascade Operations**: Appropriate cascading for data consistency
-3. **JSON Handling**: Prevention of circular references
-4. **Validation**: Input validation where appropriate
-5. **Naming Conventions**: Consistent field and table naming
-6. **Timestamps**: Creation timestamps for audit trails
-7. **Security**: Sensitive data handling (passwords, payment info)
-
-## Usage Examples
-
-### Creating a User with Address
-```java
-User user = new User();
-user.setFirstName("John");
-user.setLastName("Doe");
-user.setEmail("john@example.com");
-
-Address address = new Address();
-address.setStreetAddress("123 Main St");
-address.setCity("New York");
-address.setUser(user);
-
-user.getAddress().add(address);
+```sql
+CREATE TABLE user (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    first_name VARCHAR(255),
+    last_name VARCHAR(255),
+    email VARCHAR(255) UNIQUE,
+    password VARCHAR(255), -- BCrypt encrypted
+    role VARCHAR(50),
+    mobile VARCHAR(20),
+    created_at TIMESTAMP
+);
 ```
 
-### Creating a Product with Category
-```java
-Category category = new Category();
-category.setName("Electronics");
-category.setLevel(1);
+## Configuration Requirements
 
-Product product = new Product();
-product.setTitle("Smartphone");
-product.setPrice(999);
-product.setCategory(category);
+### Dependencies
+
+- **Spring Security**: Core security framework
+- **JWT (io.jsonwebtoken)**: JWT token handling
+- **Spring Web**: REST API support
+- **Spring Data JPA**: Database operations
+- **Validation**: Input validation
+
+### Security Configuration
+
+```java
+@Configuration
+public class AppConfig {
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) {
+        // Configuration for JWT authentication
+        // CORS settings
+        // API endpoint protection
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+}
 ```
 
-### Adding Ratings and Reviews
-```java
-Rating rating = new Rating();
-rating.setRating(4.5);
-rating.setUser(user);
-rating.setProduct(product);
+## Testing Examples
 
-Review review = new Review();
-review.setReview("Great product!");
-review.setUser(user);
-review.setProduct(product);
+### Using curl
+
+**Registration:**
+
+```bash
+curl -X POST http://localhost:8080/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john.doe@example.com",
+    "password": "securePassword123"
+  }'
 ```
 
-## Security Considerations
+**Login:**
 
-⚠️ **Important Notes:**
+```bash
+curl -X POST http://localhost:8080/auth/signin \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john.doe@example.com",
+    "password": "securePassword123"
+  }'
+```
 
-1. **Password Storage**: Passwords should be encrypted before storage
-2. **Payment Information**: Consider using external payment providers for PCI compliance
-3. **Data Validation**: Add more comprehensive validation for production use
-4. **Access Control**: Implement proper authorization for sensitive operations
-5. **Data Privacy**: Ensure compliance with data protection regulations
+### Using JavaScript/Fetch
+
+**Registration:**
+
+```javascript
+const registerUser = async () => {
+  const response = await fetch("http://localhost:8080/auth/signup", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      firstName: "John",
+      lastName: "Doe",
+      email: "john.doe@example.com",
+      password: "securePassword123",
+    }),
+  });
+
+  const data = await response.json();
+  localStorage.setItem("token", data.jwt);
+};
+```
+
+**Login:**
+
+```javascript
+const loginUser = async () => {
+  const response = await fetch("http://localhost:8080/auth/signin", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      email: "john.doe@example.com",
+      password: "securePassword123",
+    }),
+  });
+
+  const data = await response.json();
+  localStorage.setItem("token", data.jwt);
+};
+```
+
+## Best Practices
+
+### Security Recommendations
+
+1. **HTTPS**: Always use HTTPS in production
+2. **Token Storage**: Store tokens securely (httpOnly cookies recommended)
+3. **Password Policy**: Implement strong password requirements
+4. **Rate Limiting**: Add rate limiting to prevent brute force attacks
+5. **Token Refresh**: Implement token refresh mechanism
+6. **Input Validation**: Add comprehensive input validation
+
+### Client-Side Considerations
+
+1. **Token Management**: Handle token expiration gracefully
+2. **Error Handling**: Implement proper error handling for auth failures
+3. **Loading States**: Show loading indicators during auth operations
+4. **Auto-logout**: Logout users on token expiration
+5. **Secure Storage**: Use secure storage for tokens
+
+## Common Issues and Solutions
+
+### 1. "Email is Already Used Another Account"
+
+**Cause**: Attempting to register with an existing email
+**Solution**: Use login endpoint or different email
+
+### 2. "Invalid username or password"
+
+**Cause**: Incorrect credentials
+**Solution**: Verify email and password, check for typos
+
+### 3. "user not found with email"
+
+**Cause**: Email not registered in system
+**Solution**: Register the user first
+
+### 4. Token Expired
+
+**Cause**: JWT token has expired
+**Solution**: Implement token refresh or re-authenticate
 
 ## Integration Points
 
-This model package integrates with:
-- **Repository Layer**: Spring Data JPA repositories
-- **Service Layer**: Business logic and transaction management
-- **Controller Layer**: REST API endpoints
-- **Security Layer**: Authentication and authorization
-- **Validation Layer**: Input validation and error handling
+The Auth API integrates with:
+
+- **Product APIs**: Protected endpoints require authentication
+- **User Profile APIs**: User-specific operations
+- **Order APIs**: Order management requires authentication
+- **Review/Rating APIs**: User-generated content requires auth
+
+## Future Enhancements
+
+### Planned Features
+
+1. **Email Verification**: Email verification during registration
+2. **Password Reset**: Forgot password functionality
+3. **Two-Factor Authentication**: Enhanced security
+4. **Social Login**: OAuth integration (Google, Facebook)
+5. **Role-Based Access Control**: Admin/user role management
+6. **Account Lockout**: Temporary account lock after failed attempts
+
+### API Versioning
+
+Future versions will include:
+
+- v2: Enhanced security features
+- v3: Social login integration
+- v4: Advanced user management
+
+## Support
+
+For authentication-related issues:
+
+1. Check server logs for detailed error messages
+2. Verify JWT configuration in AppConfig
+3. Ensure database connectivity
+4. Validate request format and headers
+5. Check network connectivity and CORS settings
+
+---
+
+**Last Updated**: January 2024
+**Version**: 1.0
+**API Version**: v1
