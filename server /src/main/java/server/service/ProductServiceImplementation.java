@@ -6,7 +6,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import server.exception.ProductionException;
+import server.exception.ProductException;
 import server.model.Category;
 import server.model.Product;
 import server.repository.CategoryRepository;
@@ -80,7 +80,7 @@ public class ProductServiceImplementation implements ProductService{
     }
 
     @Override
-    public String deleterProduct(Long productId) throws ProductionException {
+    public String deleterProduct(Long productId) throws ProductException {
         Product product = findProductById(productId);
         product.getSizes().clear();
         productRepository.delete(product);
@@ -88,7 +88,7 @@ public class ProductServiceImplementation implements ProductService{
     }
 
     @Override
-    public Product updateProduct(Long productId, Product req) throws ProductionException {
+    public Product updateProduct(Long productId, Product req) throws ProductException {
         Product product = findProductById(productId);
 
         if(req.getQuantity()!=0){
@@ -99,12 +99,12 @@ public class ProductServiceImplementation implements ProductService{
     }
 
     @Override
-    public Product findProductById(Long productId) throws ProductionException {
+    public Product findProductById(Long productId) throws ProductException {
         Optional<Product> opt = productRepository.findById(productId);
         if(opt.isPresent()){
             return opt.get();
         }
-       throw new ProductionException("Product not fount with this id -"+productId);
+       throw new ProductException("Product not fount with this id -"+productId);
     }
 
     @Override
