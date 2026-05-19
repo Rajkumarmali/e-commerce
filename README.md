@@ -1,44 +1,57 @@
-# Add Cart and CartItem service layer
+Add Rating and Review service layer
 
 ## Summary
 
-- Introduces **CartService** and **CartItemService** interfaces with Spring `@Service` implementations for cart lifecycle and line-item management.
-- Adds **CartRepository** and **CartItemRepository** with custom JPQL queries to look up carts by user and detect duplicate items (same product, size, and user).
-- Supports creating a user cart, adding items via **AddItemRequest**, computing cart totals, and CRUD-style operations on cart items with ownership checks.
-- Includes integration tests (**TestCartService**, **TestCartItemService**) and supporting model/exception updates.
+- Introduces **RatingService** and **ReviewService** interfaces with Spring `@Service` implementations for product ratings and text reviews.
+- Adds **RatingRepository** and **ReviewRepository** with JPQL queries to fetch all ratings/reviews for a product.
+- Supports creating ratings and reviews from request DTOs, linking them to **User** and **Product**, and listing feedback by `productId`.
+- Includes integration tests (**TestRating**, **TestReview**) plus **Rating** / **Review** entities and request models.
+
+> REST controllers are not included; this PR is the backend service and persistence layer only.
 
 ## Changes
 
-### Services (core)
+### Services
 
-| Component                       | Responsibility                                                                                                             |
-| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `CartService`                   | `createCart`, `addCartItem`, `findUserCart`                                                                                |
-| `CartServiceImplementation`     | Orchestrates cart repo, cart item service, and product service; aggregates `totalPrice`, `totalItem`, `totalDiscountPrice` |
-| `CartItemService`               | `createCartItem`, `updateCartItem`, `isCartItemExist`, `removeCartItem`, `findCartItemById`                                |
-| `CartItemServiceImplementation` | Persists items, validates user ownership on update/remove                                                                  |
+| Component                     | Responsibility                                                         |
+| ----------------------------- | ---------------------------------------------------------------------- |
+| `RatingService`               | `createRating`, `getProductsRating`                                    |
+| `RatingServiceImplementation` | Validates product via `ProductService`, persists rating with timestamp |
+| `ReviewService`               | `createReview`, `getAllProductReview`                                  |
+| `ReviewServiceImplementation` | Validates product via `ProductService`, persists review with timestamp |
 
 ### Supporting code
 
-- **Repositories:** `CartRepository`, `CartItemRepository`
-- **Request DTO:** `AddItemRequest` (productId, size, quantity, price)
-- **Models:** `Cart`, `CartItem` (JPA entities and relationships)
-- **Exception:** `CartItemException`
-- **Tests:** `TestCartService`, `TestCartItemService`
-- **Related updates:** `ProductService` / `ProductServiceImplementation`, `ProductException`, `application.properties`
+- **Repositories:** `RatingRepository`, `ReviewRepository`
+- **Request DTOs:** `RatingRequest` (productId, rating), `ReviewRequest` (productId, review)
+- **Models:** `Rating`, `Review` (JPA entities with user/product associations)
+- **Tests:** `TestRating`, `TestReview`
 
-### API surface (service layer)
+### Service API
 
-**CartService**
+**RatingService**
 
-- `createCart(User user)` — creates and saves a cart for a user
-- `addCartItem(Long userId, AddItemRequest req)` — adds a new line item if the same product/size is not already in the cart; uses product price and discounted price
-- `findUserCart(Long userId)` — loads the user cart, sums item prices/quantities, persists totals on the cart
+- `createRating(RatingRequest req, User user)` — loads product by id, creates a `Rating` with score and `createtAt`, saves to DB
+- `getProductsRating(Long productId)` — returns all ratings for the given product
 
-**CartItemService**
+**ReviewService**
 
-- `createCartItem(CartItem cartItem)` — saves a new cart line item
-- `updateCartItem(Long userId, Long id, CartItem cartItem)` — updates quantity and prices when the caller owns the item
-- `isCartItemExist(Cart, Product, size, userId)` — duplicate detection for add-to-cart
-- `removeCartItem(Long userId, Long cartItemId)` — deletes item if owned by the user
-- `findCartItemById(Long cartItemId)` — lookup or `CartItemException`
+- `createReview(ReviewRequest req, User user)` — loads product by id, creates a `Review` with text and `createdAt`, saves to DB
+- `getAllProductReview(Long productId)` — returns all reviews for the given product
+
+## Files included
+
+```
+server/src/main/java/server/service/RatingService.java
+server/src/main/java/server/service/RatingServiceImplementation.java
+server/src/main/java/server/service/ReviewService.java
+server/src/main/java/server/service/ReviewServiceImplementation.java
+server/src/main/java/server/repository/RatingRepository.java
+server/src/main/java/server/repository/ReviewRepository.java
+server/src/main/java/server/request/RatingRequest.java
+server/src/main/java/server/request/ReviewRequest.java
+server/src/main/java/server/model/Rating.java
+server/src/main/java/server/model/Review.java
+server/src/test/java/server/server/TestRating.java
+server/src/test/java/server/server/TestReview.java
+```
