@@ -1,487 +1,190 @@
-# Authentication APIs
+# Product Service — E-Commerce Backend
 
-This document provides comprehensive documentation for the authentication APIs in the e-commerce application.
+This document describes the **Product** domain layer: service interface, implementation, repositories, models, and tests for the Spring Boot server.
 
 ## Overview
 
-The authentication system provides secure user registration and login functionality using JWT (JSON Web Tokens) for stateless authentication. The API follows RESTful conventions and integrates with Spring Security for robust security implementation.
+The product module manages catalog items with a **three-level category hierarchy** (e.g. Electronics → Mobile → Smartphone). It supports creating products, updating quantity, deleting products, finding by ID, and paginated listing with filters (category, price, discount, color, stock, sort).
 
-## Base URL
+| Layer                          | Responsibility                               |
+| ------------------------------ | -------------------------------------------- |
+| `ProductService`               | Contract for product operations              |
+| `ProductServiceImplementation` | Business logic, category creation, filtering |
+| `ProductRepository`            | JPA persistence and custom filter query      |
+| `CategoryRepository`           | Category lookup and parent-child queries     |
+| `CreateProductRequest`         | DTO for product creation                     |
+| `ProductionException`          | Thrown when a product is not found           |
+
+**Status:** Service layer and tests are implemented. REST controllers for `/products` are not yet wired; expose these methods via a `ProductController` when ready.
+
+## Tech Stack
+
+- Java / Spring Boot
+- Spring Data JPA
+- MySQL (`ecommerce` database)
+- Server port: **5454** (see `application.properties`)
+
+## Project Structure
 
 ```
-http://localhost:8080/auth
+server /src/main/java/server/
+├── model/
+│   ├── Product.java
+│   ├── Category.java
+│   └── Size.java
+├── request/
+│   └── CreateProductRequest.java
+├── repository/
+│   ├── ProductRepository.java
+│   └── CategoryRepository.java
+├── service/
+│   ├── ProductService.java
+│   └── ProductServiceImplementation.java
+└── exception/
+    └── ProductionException.java
+
+server /src/test/java/server/server/
+└── TestProduct.java
 ```
 
-## Security Features
+## Service API
 
-- **JWT Token Authentication**: Stateless authentication using JWT tokens
-- **Password Encryption**: BCrypt password hashing
-- **Email Validation**: Unique email verification during registration
-- **Spring Security Integration**: Comprehensive security framework
-- **Custom User Details Service**: User authentication and authorization
+### `ProductService` methods
 
-## API Endpoints
+| Method                                       | Description                                                              |
+| -------------------------------------------- | ------------------------------------------------------------------------ |
+| `createProduct(CreateProductRequest req)`    | Creates top/second/third level categories if missing, then saves product |
+| `findProductById(Long productId)`            | Returns product or throws `ProductionException`                          |
+| `updateProduct(Long productId, Product req)` | Updates quantity when `req.getQuantity() != 0`                           |
+| `deleterProduct(Long productId)`             | Clears sizes, deletes product                                            |
+| `findProductByCategory(String category)`     | **Stub** — currently returns empty list                                  |
+| `getAllProduct(...)`                         | Filtered, paginated product list                                         |
 
-### 1. User Registration (Sign Up)
+### Create product — request shape
 
-**Endpoint:** `POST /auth/signup`
-
-**Description:** Creates a new user account and returns a JWT token for immediate authentication.
-
-**Request Body:**
+Used by `createProduct`. Categories are created automatically if they do not exist.
 
 ```json
 {
-  "firstName": "John",
-  "lastName": "Doe",
-  "email": "john.doe@example.com",
-  "password": "securePassword123"
+  "title": "iPhone 15",
+  "description": "Apple Mobile",
+  "price": 100000,
+  "discountPresent": 10,
+  "quantity": 5,
+  "brand": "Apple",
+  "color": "Black",
+  "imageUrl": "iphone.png",
+  "sizes": [],
+  "topLevelCategory": "Electronics",
+  "secondLevelCategory": "Mobile",
+  "thirdLevelCategory": "SmartPhone"
 }
 ```
 
-**Request Fields:**
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| firstName | String | Yes | User's first name |
-| lastName | String | Yes | User's last name |
-| email | String | Yes | Unique email address |
-| password | String | Yes | Plain text password (will be encrypted) |
+| Field               | Type        | Description                           |
+| ------------------- | ----------- | ------------------------------------- |
+| title               | String      | Product name                          |
+| description         | String      | Product description                   |
+| price               | int         | List price                            |
+| discountPresent     | int         | Discount percentage                   |
+| quantity            | int         | Stock quantity                        |
+| brand               | String      | Brand name                            |
+| color               | String      | Color variant                         |
+| imageUrl            | String      | Image URL                             |
+| sizes               | Set\<Size\> | Available sizes                       |
+| topLevelCategory    | String      | Level-1 category (created if missing) |
+| secondLevelCategory | String      | Level-2 category                      |
+| thirdLevelCategory  | String      | Level-3 category (linked to product)  |
 
-**Success Response (201 Created):**
+### Filter and pagination — `getAllProduct`
 
-```json
-{
-  "jwt": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqb2huLmRvZUBleGFtcGxlLmNvbSIsImlhdCI6MTY0NjI0MjAwMCwiZXhwIjoxNjQ2MzI4NDAwfQ.signature",
-  "message": "SignUp successfully"
-}
-```
+| Parameter           | Type           | Description                                      |
+| ------------------- | -------------- | ------------------------------------------------ |
+| category            | String         | Filter by category name (`null` = all)           |
+| color               | List\<String\> | Filter by color (case-insensitive)               |
+| size                | List\<String\> | Reserved for size filter                         |
+| minPrice / maxPrice | Integer        | Filter on `discountedPrice`                      |
+| minDiscount         | Integer        | Minimum discount %                               |
+| sort                | String         | `price_low` or `price_high`                      |
+| stock               | String         | `in_stock` (qty > 0) or `out_of_stock` (qty < 1) |
+| pageNumber          | Integer        | Zero-based page index                            |
+| pageSize            | Integer        | Page size                                        |
 
-**Error Responses:**
+Returns `Page<Product>` with filtered content and total count.
 
-**400 Bad Request** - Email already exists:
+### Errors
 
-```json
-{
-  "timestamp": "2024-01-01T12:00:00.000+00:00",
-  "status": 400,
-  "error": "Bad Request",
-  "message": "Email is Already used Another Account",
-  "path": "/auth/signup"
-}
-```
-
-**422 Unprocessable Entity** - Validation errors:
-
-```json
-{
-  "timestamp": "2024-01-01T12:00:00.000+00:00",
-  "status": 422,
-  "error": "Unprocessable Entity",
-  "message": "Validation failed for object='user'. Error count: 1",
-  "errors": [
-    {
-      "field": "email",
-      "message": "Email should be valid"
-    }
-  ]
-}
-```
-
-### 2. User Login (Sign In)
-
-**Endpoint:** `POST /auth/signin`
-
-**Description:** Authenticates a user and returns a JWT token for subsequent API calls.
-
-**Request Body:**
-
-```json
-{
-  "email": "john.doe@example.com",
-  "password": "securePassword123"
-}
-```
-
-**Request Fields:**
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| email | String | Yes | Registered email address |
-| password | String | Yes | User password |
-
-**Success Response (201 Created):**
-
-```json
-{
-  "jwt": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqb2huLmRvZUBleGFtcGxlLmNvbSIsImlhdCI6MTY0NjI0MjAwMCwiZXhwIjoxNjQ2MzI4NDAwfQ.signature",
-  "message": "SingIn successfully"
-}
-```
-
-**Error Responses:**
-
-**401 Unauthorized** - Invalid credentials:
-
-```json
-{
-  "timestamp": "2024-01-01T12:00:00.000+00:00",
-  "status": 401,
-  "error": "Unauthorized",
-  "message": "Invalid username or password",
-  "path": "/auth/signin"
-}
-```
-
-**404 Not Found** - User not found:
-
-```json
-{
-  "timestamp": "2024-01-01T12:00:00.000+00:00",
-  "status": 404,
-  "error": "Not Found",
-  "message": "user not found with email",
-  "path": "/auth/signin"
-}
-```
-
-## JWT Token Usage
-
-### Header Format
-
-Include the JWT token in the Authorization header for all protected API calls:
+**`ProductionException`** — thrown when a product is not found, for example:
 
 ```
-Authorization: Bearer <JWT_TOKEN>
+Product not fount with this id -{productId}
 ```
 
-**Example:**
+Handle in a controller with `@ExceptionHandler` or a global handler and return HTTP 404.
 
-```
-Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqb2huLmRvZUBleGFtcGxlLmNvbSIsImlhdCI6MTY0NjI0MjAwMCwiZXhwIjoxNjQ2MzI4NDAwfQ.signature
-```
+## Category hierarchy
 
-### Token Expiration
+On create:
 
-- **Duration**: 846,000,000 milliseconds (~9.8 days)
-- **Automatic Renewal**: Client should handle token refresh before expiration
+1. **Level 1** — `topLevelCategory` (no parent)
+2. **Level 2** — `secondLevelCategory` (parent: level 1)
+3. **Level 3** — `thirdLevelCategory` (parent: level 2)
 
-## Architecture Components
+The product is associated with the **third-level** category.
 
-### 1. AuthController
+## Database
 
-**Main REST controller** handling authentication endpoints.
+- **URL:** `jdbc:mysql://localhost:3306/ecommerce`
+- **DDL:** `spring.jpa.hibernate.ddl-auto=update`
 
-**Responsibilities:**
+Ensure MySQL is running and the `ecommerce` database exists before tests or startup.
 
-- User registration (`/signup`)
-- User authentication (`/signin`)
-- JWT token generation
-- Input validation
-- Error handling
+## Running tests
 
-### 2. CustomeUserServiceImplementation
-
-**Custom UserDetailsService** implementation for Spring Security.
-
-**Responsibilities:**
-
-- Load user by email
-- Provide user details for authentication
-- Integrate with Spring Security framework
-
-### 3. JWT Provider
-
-**Token management service** (located in config package).
-
-**Responsibilities:**
-
-- Generate JWT tokens
-- Parse and validate tokens
-- Extract user claims
-
-### 4. Password Encoder
-
-**BCrypt password encoder** bean (configured in AppConfig).
-
-**Responsibilities:**
-
-- Encrypt passwords during registration
-- Verify passwords during login
-- Secure password storage
-
-## Data Transfer Objects (DTOs)
-
-### LoginRequest
-
-**Request DTO** for user login.
-
-```java
-public class LoginRequest {
-    private String email;
-    private String password;
-}
-```
-
-### AuthResponse
-
-**Response DTO** for authentication operations.
-
-```java
-public class AuthResponse {
-    private String jwt;
-    private String message;
-}
-```
-
-## Exception Handling
-
-### UserException
-
-**Custom exception** for user-related errors.
-
-**Thrown When:**
-
-- Email already exists during registration
-- User validation fails
-- User not found
-
-### BadCredentialsException
-
-**Spring Security exception** for authentication failures.
-
-**Thrown When:**
-
-- Invalid username/email
-- Incorrect password
-- Account authentication issues
-
-## Security Flow
-
-### Registration Flow
-
-1. Client sends user data to `/auth/signup`
-2. Server validates email uniqueness
-3. Password is encrypted using BCrypt
-4. User is saved to database
-5. JWT token is generated
-6. Token and success message returned to client
-
-### Login Flow
-
-1. Client sends credentials to `/auth/signin`
-2. Server loads user by email
-3. Password is verified against encrypted hash
-4. Authentication is established in SecurityContext
-5. JWT token is generated
-6. Token and success message returned to client
-
-### Protected API Flow
-
-1. Client includes JWT token in Authorization header
-2. JwtValidator filter intercepts request
-3. Token is validated and parsed
-4. User authentication is set in SecurityContext
-5. Request proceeds to protected endpoint
-6. Response returned to client
-
-## Database Schema
-
-### User Table
-
-```sql
-CREATE TABLE user (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    first_name VARCHAR(255),
-    last_name VARCHAR(255),
-    email VARCHAR(255) UNIQUE,
-    password VARCHAR(255), -- BCrypt encrypted
-    role VARCHAR(50),
-    mobile VARCHAR(20),
-    created_at TIMESTAMP
-);
-```
-
-## Configuration Requirements
-
-### Dependencies
-
-- **Spring Security**: Core security framework
-- **JWT (io.jsonwebtoken)**: JWT token handling
-- **Spring Web**: REST API support
-- **Spring Data JPA**: Database operations
-- **Validation**: Input validation
-
-### Security Configuration
-
-```java
-@Configuration
-public class AppConfig {
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) {
-        // Configuration for JWT authentication
-        // CORS settings
-        // API endpoint protection
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-}
-```
-
-## Testing Examples
-
-### Using curl
-
-**Registration:**
+From the `server ` module directory:
 
 ```bash
-curl -X POST http://localhost:8080/auth/signup \
-  -H "Content-Type: application/json" \
-  -d '{
-    "firstName": "John",
-    "lastName": "Doe",
-    "email": "john.doe@example.com",
-    "password": "securePassword123"
-  }'
+./mvnw test -Dtest=TestProduct
 ```
 
-**Login:**
+`TestProduct` covers:
 
-```bash
-curl -X POST http://localhost:8080/auth/signin \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "john.doe@example.com",
-    "password": "securePassword123"
-  }'
-```
+- `testCreateProduct` — create with categories and assertions
+- `testUpdateProduct` — quantity update
+- `findProductById` — fetch by ID
+- `findAllProduct` — filtered pagination (e.g. color `Black`)
 
-### Using JavaScript/Fetch
+## Dependencies
 
-**Registration:**
+`ProductServiceImplementation` is constructed with:
 
-```javascript
-const registerUser = async () => {
-  const response = await fetch("http://localhost:8080/auth/signup", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      firstName: "John",
-      lastName: "Doe",
-      email: "john.doe@example.com",
-      password: "securePassword123",
-    }),
-  });
+- `ProductRepository`
+- `UserService` (injected; reserved for future seller/admin checks)
+- `CategoryRepository`
 
-  const data = await response.json();
-  localStorage.setItem("token", data.jwt);
-};
-```
+## Integration with Auth
 
-**Login:**
+The main [README](../README.md) documents JWT auth at `/auth`. When you add `ProductController`, protect admin routes (create/update/delete) with Spring Security and JWT, consistent with the auth documentation.
 
-```javascript
-const loginUser = async () => {
-  const response = await fetch("http://localhost:8080/auth/signin", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      email: "john.doe@example.com",
-      password: "securePassword123",
-    }),
-  });
+## Known limitations / follow-ups
 
-  const data = await response.json();
-  localStorage.setItem("token", data.jwt);
-};
-```
+1. **No REST controller yet** — wire `ProductService` to HTTP endpoints.
+2. **`findProductByCategory`** — returns empty list; implement repository query.
+3. **`updateProduct`** — only updates quantity today.
+4. **Naming** — consider renaming `ProductionException` → `ProductException` and `deleterProduct` → `deleteProduct` in a later change.
+5. **Secrets** — do not commit real DB passwords; use environment variables in `application.properties`.
 
-## Best Practices
+## Future REST endpoints (suggested)
 
-### Security Recommendations
-
-1. **HTTPS**: Always use HTTPS in production
-2. **Token Storage**: Store tokens securely (httpOnly cookies recommended)
-3. **Password Policy**: Implement strong password requirements
-4. **Rate Limiting**: Add rate limiting to prevent brute force attacks
-5. **Token Refresh**: Implement token refresh mechanism
-6. **Input Validation**: Add comprehensive input validation
-
-### Client-Side Considerations
-
-1. **Token Management**: Handle token expiration gracefully
-2. **Error Handling**: Implement proper error handling for auth failures
-3. **Loading States**: Show loading indicators during auth operations
-4. **Auto-logout**: Logout users on token expiration
-5. **Secure Storage**: Use secure storage for tokens
-
-## Common Issues and Solutions
-
-### 1. "Email is Already Used Another Account"
-
-**Cause**: Attempting to register with an existing email
-**Solution**: Use login endpoint or different email
-
-### 2. "Invalid username or password"
-
-**Cause**: Incorrect credentials
-**Solution**: Verify email and password, check for typos
-
-### 3. "user not found with email"
-
-**Cause**: Email not registered in system
-**Solution**: Register the user first
-
-### 4. Token Expired
-
-**Cause**: JWT token has expired
-**Solution**: Implement token refresh or re-authenticate
-
-## Integration Points
-
-The Auth API integrates with:
-
-- **Product APIs**: Protected endpoints require authentication
-- **User Profile APIs**: User-specific operations
-- **Order APIs**: Order management requires authentication
-- **Review/Rating APIs**: User-generated content requires auth
-
-## Future Enhancements
-
-### Planned Features
-
-1. **Email Verification**: Email verification during registration
-2. **Password Reset**: Forgot password functionality
-3. **Two-Factor Authentication**: Enhanced security
-4. **Social Login**: OAuth integration (Google, Facebook)
-5. **Role-Based Access Control**: Admin/user role management
-6. **Account Lockout**: Temporary account lock after failed attempts
-
-### API Versioning
-
-Future versions will include:
-
-- v2: Enhanced security features
-- v3: Social login integration
-- v4: Advanced user management
-
-## Support
-
-For authentication-related issues:
-
-1. Check server logs for detailed error messages
-2. Verify JWT configuration in AppConfig
-3. Ensure database connectivity
-4. Validate request format and headers
-5. Check network connectivity and CORS settings
+| Method | Path                 | Service method                             |
+| ------ | -------------------- | ------------------------------------------ |
+| POST   | `/api/products`      | `createProduct`                            |
+| GET    | `/api/products/{id}` | `findProductById`                          |
+| PUT    | `/api/products/{id}` | `updateProduct`                            |
+| DELETE | `/api/products/{id}` | `deleterProduct`                           |
+| GET    | `/api/products`      | `getAllProduct` (query params for filters) |
 
 ---
 
-**Last Updated**: January 2024
-**Version**: 1.0
-**API Version**: v1
+**Last Updated:** May 2026  
+**Version:** 1.0 (service layer)
