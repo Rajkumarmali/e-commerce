@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import server.exception.ProductionException;
+import server.exception.ProductException;
 import server.model.Product;
 import server.repository.ProductRepository;
 import server.request.CreateProductRequest;
@@ -12,15 +12,9 @@ import server.service.ProductServiceImplementation;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 
 
 import org.springframework.data.domain.Page;
-
-
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 @SpringBootTest
 public class TestProduct {
@@ -35,7 +29,7 @@ public class TestProduct {
     public void testCreateProduct(){
         CreateProductRequest request = new CreateProductRequest();
 
-        request.setTitle("iPhone 15");
+        request.setTitle("iPhone 16");
         request.setDescription("Apple Mobile");
         request.setPrice(100000);
         request.setDiscountPresent(10);
@@ -55,7 +49,7 @@ public class TestProduct {
         Assertions.assertNotNull(product);
 
         Assertions.assertEquals(
-                "iPhone 15",
+                "iPhone 16",
                 product.getTitle());
 
         Assertions.assertEquals(
@@ -63,12 +57,12 @@ public class TestProduct {
                 product.getBrand());
 
         Assertions.assertEquals(
-                100000,
+                150000,
                 product.getPrice());
     }
 
     @Test
-    public void testUpdateProduct() throws ProductionException {
+    public void testUpdateProduct() throws ProductException {
         Long productId = 1L;
         Product req = new Product();
         req.setQuantity(10);
@@ -76,7 +70,7 @@ public class TestProduct {
     }
 
     @Test
-    public void findProductById() throws ProductionException{
+    public void findProductById() throws ProductException {
         Product product = productServiceImplementation.findProductById(1L);
         System.out.println(product);
     }
