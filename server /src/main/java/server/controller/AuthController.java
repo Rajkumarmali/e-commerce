@@ -1,5 +1,6 @@
 package server.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -8,10 +9,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import server.config.JwtConstant;
 import server.config.JwtProvider;
 import server.exception.UserException;
 import server.model.User;
@@ -20,6 +19,7 @@ import server.request.LoginRequest;
 import server.response.AuthResponse;
 import server.service.CartService;
 import server.service.CustomeUserServiceImplementation;
+import server.service.UserService;
 
 @RestController
 @RequestMapping("/auth")
@@ -30,14 +30,16 @@ public class AuthController {
     private PasswordEncoder passwordEncoder;
     private CustomeUserServiceImplementation customeUserService;
     private CartService cartService;
+    private UserService userService;
 
 
-    public AuthController(UserRepository userRepository, JwtProvider jwtProvider, PasswordEncoder passwordEncoder, CustomeUserServiceImplementation customeUserServiceImplementation, CartService cartService) {
+    public AuthController(UserRepository userRepository, JwtProvider jwtProvider, PasswordEncoder passwordEncoder, CustomeUserServiceImplementation customeUserServiceImplementation, CartService cartService, UserService userService) {
         this.userRepository = userRepository;
         this.jwtProvider = jwtProvider;
         this.passwordEncoder = passwordEncoder;
         this.customeUserService = customeUserServiceImplementation;
         this.cartService = cartService;
+        this.userService = userService;
     }
 
     @PostMapping("/signup")
@@ -86,7 +88,15 @@ public class AuthController {
          authResponse.setMessage("SingIn successfully");
 
          return new ResponseEntity<AuthResponse>(authResponse, HttpStatus.CREATED);
-     }
+    }
+
+    @GetMapping("/userProfile")
+    public ResponseEntity<User> userProfile(HttpServletRequest request) throws UserException {
+        String jwt = request.getHeader(JwtConstant.JWT_HEADER);
+        System.out.println(jwt);
+        User user = userService.findUserProfileByJwt(jwt);
+        return new ResponseEntity<>(user,HttpStatus.ACCEPTED);
+    }
 
     private Authentication authenticate(String username, String password) {
         UserDetails userDetails = customeUserService.loadUserByUsername(username);
