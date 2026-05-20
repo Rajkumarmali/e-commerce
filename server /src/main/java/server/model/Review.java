@@ -24,8 +24,7 @@ public class Review {
 
     private LocalDateTime createdAt;
 
-    private Review(){
-
+    public Review() {
     }
 
     public Review(Long id, String review, Product product, User user, LocalDateTime createdAt) {
