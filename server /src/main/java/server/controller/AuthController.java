@@ -18,6 +18,7 @@ import server.model.User;
 import server.repository.UserRepository;
 import server.request.LoginRequest;
 import server.response.AuthResponse;
+import server.service.CartService;
 import server.service.CustomeUserServiceImplementation;
 
 @RestController
@@ -28,13 +29,15 @@ public class AuthController {
     private JwtProvider jwtProvider;
     private PasswordEncoder passwordEncoder;
     private CustomeUserServiceImplementation customeUserService;
+    private CartService cartService;
 
 
-    public AuthController(UserRepository userRepository, JwtProvider jwtProvider, PasswordEncoder passwordEncoder, CustomeUserServiceImplementation customeUserServiceImplementation) {
+    public AuthController(UserRepository userRepository, JwtProvider jwtProvider, PasswordEncoder passwordEncoder, CustomeUserServiceImplementation customeUserServiceImplementation, CartService cartService) {
         this.userRepository = userRepository;
         this.jwtProvider = jwtProvider;
         this.passwordEncoder = passwordEncoder;
         this.customeUserService = customeUserServiceImplementation;
+        this.cartService = cartService;
     }
 
     @PostMapping("/signup")
@@ -56,6 +59,7 @@ public class AuthController {
          createdUser.setLastName(lastName);
 
          User savedUser = userRepository.save(createdUser);
+         cartService.createCart(savedUser);
 
         Authentication authentication = new UsernamePasswordAuthenticationToken(savedUser.getEmail(),savedUser.getPassword());
         SecurityContextHolder.getContext().setAuthentication(authentication);
