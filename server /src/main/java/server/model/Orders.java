@@ -55,7 +55,7 @@ public class Orders {
         this.totalPrice = totalPrice;
         this.totalDiscountedPrice = totalDiscountedPrice;
         this.discount = discount;
-        orderStatus = orderStatus;
+        this.orderStatus = orderStatus;
         this.totalItems = totalItems;
         this.createdAt = createdAt;
     }
@@ -153,7 +153,7 @@ public class Orders {
     }
 
     public void setOrderStatus(String orderStatus) {
-        orderStatus = orderStatus;
+        this.orderStatus = orderStatus;
     }
 
     public int getTotalItems() {
