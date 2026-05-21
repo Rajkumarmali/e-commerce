@@ -28,12 +28,12 @@ export const findProducts = (reqData) => async (dispatch) => {
     }
 }
 
-export const findProductById = (reqData) => async (dispatch) => {
+export const findProductById = (productId) => async (dispatch) => {
     dispatch({ type: FIND_PRODUCT_BY_ID_REQUEST })
-    const { productId } = reqData;
     try {
         const { data } = await api.get(`/api/product/product/id/${productId}`);
         dispatch({ type: FIND_PRODUCT_BY_ID_SUCCESS, payload: data })
+        console.log("product:", data)
     } catch (err) {
         dispatch({ type: FIND_PRODUCT_BY_ID_FAILER, payload: err.message })
     }
