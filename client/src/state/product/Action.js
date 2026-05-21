@@ -20,7 +20,7 @@ export const findProducts = (reqData) => async (dispatch) => {
         params.pageSize = pageSize;
 
         const { data } = await api.get("/api/product/products", { params });
-
+        console.log("Product :", data);
         dispatch({ type: FIND_PRODUCTS_SUCCESS, payload: data })
 
     } catch (err) {
