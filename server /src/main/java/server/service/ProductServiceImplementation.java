@@ -120,7 +120,7 @@ public class ProductServiceImplementation implements ProductService{
         Pageable pageable = PageRequest.of(pageNumber,pageSize);
         List<Product> products = productRepository.filterProducts(category,minPrice,maxPrice,minDiscount,sort);
 
-        if(!color.isEmpty()){
+        if(color != null && !color.isEmpty()){
             products = products.stream().filter(p->color.stream().anyMatch(c->
                     c.equalsIgnoreCase(p.getColor()))).collect(Collectors.toList());
         }
