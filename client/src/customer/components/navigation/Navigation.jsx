@@ -54,15 +54,14 @@ export default function Navigation() {
   };
 
   useEffect(() => {
-    if (auth.user) {
-      handleClose()
+    if (!auth.user) return
+
+    handleClose()
+    // Only leave auth routes after login/register — not on every page refresh
+    if (location.pathname === '/login' || location.pathname === '/register') {
       navigate('/')
     }
-    if (location.pathname === '/login' || location.pathname === '/register') {
-      navigate(-1)
-    }
-
-  }, [auth.user])
+  }, [auth.user, location.pathname])
 
   useEffect(() => {
     if (jwt) {
