@@ -1,205 +1,182 @@
-# Implement Authentication System with Redux State Management
+# Product, Cart & Order — Redux State Management
 
 ## Summary
 
-This PR implements a complete authentication system for the e-commerce application, including UI components and Redux state management for user registration, login, and user profile management.
+This PR adds Redux state management for **products**, **cart**, and **orders** in the e-commerce client. Async actions use Redux Thunk and Axios (`apiConfig`) to call the backend. The Redux store is extended with three new reducers alongside the existing auth slice.
 
 ## Changes Made
 
-### Auth Components (`client/src/auth/`)
+### Redux Store (`client/src/state/store.js`)
 
-- **AuthModal.jsx**: Modal component that dynamically renders either Login or Register form based on the current route
-- **LoginForm.jsx**: Login form with email and password fields, integrates with Redux for authentication
-- **RegisterForm.jsx**: Registration form with first name, last name, email, and password fields, handles user registration and JWT token storage
-
-### State Management (`client/src/state/`)
-
-- **store.js**: Redux store configuration with auth reducer and thunk middleware
-- **auth/ActionType.js**: Action type constants for authentication operations (REGISTER, LOGIN, GET_USER, LOG_OUT)
-- **auth/Action.js**: Async action creators using Redux Thunk:
-  - `register()`: Handles user registration via API
-  - `login()`: Handles user login via API
-  - `getUser()`: Fetches user profile using JWT token
-  - `logOut()`: Clears user session and local storage
-- **auth/Reducer.js**: Auth reducer managing user state, loading status, error handling, and JWT token
-
-## Redux Architecture Explanation
-
-### What is Redux?
-
-Redux is a predictable state container for JavaScript applications that helps manage application state in a centralized store. It follows the unidirectional data flow pattern, making state changes predictable and easier to debug.
-
-### Core Redux Concepts
-
-#### 1. **Store**
-
-The store is the single source of truth for the entire application state. In this implementation:
-
-- Located in `client/src/state/store.js`
-- Created using `legacy_createStore` with combined reducers
-- Configured with Redux Thunk middleware for async operations
-- Holds the complete application state tree
+- Registers `product`, `cart`, and `order` reducers with `combineReducers`
+- Keeps existing `auth` reducer unchanged
+- Uses `legacy_createStore` with `redux-thunk` middleware
 
 ```javascript
 const rootReducer = combineReducers({
   auth: authReducer,
+  product: customerProductReducer,
+  cart: cartReducer,
+  order: orderReducer,
 });
-export const store = legacy_createStore(rootReducer, applyMiddleware(thunk));
 ```
 
-#### 2. **Actions**
+---
 
-Actions are plain JavaScript objects that represent an intention to change the state. They must have a `type` property and can optionally carry a `payload`.
+### Product State (`client/src/state/product/`)
 
-**Action Types** (`client/src/state/auth/ActionType.js`):
+| File            | Purpose                                                                  |
+| --------------- | ------------------------------------------------------------------------ |
+| `ActionType.js` | Request / success / failure constants for product APIs                   |
+| `Action.js`     | Thunk action creators for listing and fetching products                  |
+| `Reducer.js`    | `customerProductReducer` — products list, single product, loading, error |
 
-- Constants defining all possible action types
-- Prevents typos and provides type safety
-- Includes: REGISTER_REQUEST/SUCCESS/FAILER, LOGIN_REQUEST/SUCCESS/FAILER, GET_USER_REQUEST/SUCCESS/FAILER, LOG_OUT
+**Actions**
 
-**Action Creators** (`client/src/state/auth/Action.js`):
+| Action                     | API                                       | Description                                                                                  |
+| -------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `findProducts(reqData)`    | `GET /api/product/products`               | Filtered, paginated product list (category, color, size, price, discount, stock, sort, page) |
+| `findProductById(reqData)` | `GET /api/product/product/id/{productId}` | Single product by ID                                                                         |
 
-- Functions that create and return action objects
-- Both synchronous and asynchronous (using Redux Thunk)
-- Async actions handle API calls and dispatch multiple actions
-
-#### 3. **Reducers**
-
-Reducers are pure functions that take the current state and an action, then return a new state. They specify how the application's state changes in response to actions.
-
-**Auth Reducer** (`client/src/state/auth/Reducer.js`):
-
-- Manages authentication-specific state
-- Handles loading states, error states, user data, and JWT token
-- Uses switch statement to handle different action types
-- Returns new state objects (immutable updates)
-
-```javascript
-const initialState = {
-  user: null,
-  isLoading: false,
-  error: null,
-  jwt: null,
-};
-```
-
-#### 4. **Redux Thunk Middleware**
-
-Redux Thunk is a middleware that allows writing action creators that return a function instead of an action object. This function receives `dispatch` and `getState` as arguments, enabling:
-
-- Asynchronous API calls
-- Conditional dispatching
-- Complex logic before dispatching actions
-
-**Example Flow** (Login Action):
-
-1. Component dispatches `login(userData)` action
-2. Thunk middleware intercepts the function
-3. Function executes: dispatches LOGIN_REQUEST → makes API call → dispatches LOGIN_SUCCESS or LOGIN_FAILER
-4. Reducer updates state based on action type
-5. Component re-renders with new state
-
-### Data Flow in This Implementation
-
-```
-User Action (Form Submit)
-    ↓
-Component (LoginForm/RegisterForm)
-    ↓
-dispatch(actionCreator(userData))
-    ↓
-Redux Thunk Middleware
-    ↓
-Async API Call (Axios)
-    ↓
-dispatch(success/error action)
-    ↓
-Reducer processes action
-    ↓
-State updated in Store
-    ↓
-Component re-renders with useSelector
-```
-
-### State Structure
-
-The application state is organized as:
+**State shape**
 
 ```javascript
 {
-    auth: {
-        user: null,           // User profile data
-        isLoading: false,     // Loading indicator
-        error: null,          // Error message
-        jwt: null            // JWT authentication token
-    }
+  product: {
+    prodcuts: [],   // product list from findProducts
+    product: null,  // single product from findProductById
+    loading: false,
+    error: null
+  }
 }
 ```
 
-### Integration with React Components
+---
 
-**useDispatch Hook**: Used to dispatch actions to the Redux store
+### Cart State (`client/src/state/cart/`)
+
+| File            | Purpose                                          |
+| --------------- | ------------------------------------------------ |
+| `ActionType.js` | Cart CRUD action type constants                  |
+| `Action.js`     | Thunk actions for cart operations                |
+| `Reducer.js`    | `cartReducer` — cart, cart items, loading, error |
+
+**Actions**
+
+| Action                    | API                                  | Description                              |
+| ------------------------- | ------------------------------------ | ---------------------------------------- |
+| `getCart()`               | `GET /api/cart`                      | Load current user cart                   |
+| `addItemToCart(reqData)`  | `POST /api/cart/add`                 | Add item (`reqData.data`)                |
+| `removeCartItem(reqData)` | `DELETE /api/cart_item/{cartItemId}` | Remove line item                         |
+| `updateCartItem(reqData)` | `PUT /api/cart_item/{cartItemId}`    | Update quantity/details (`reqData.data`) |
+
+**State shape**
 
 ```javascript
+{
+  cart: {
+    cart: null,
+    cartItems: [],
+    loading: false,
+    error: null
+  }
+}
+```
+
+---
+
+### Order State (`client/src/state/order/`)
+
+| File            | Purpose                                                     |
+| --------------- | ----------------------------------------------------------- |
+| `ActionType.js` | Create order and fetch-by-id action types                   |
+| `Action.js`     | Thunk actions for placing and viewing orders                |
+| `Reducer.js`    | `orderReducer` — orders list, current order, loading, error |
+
+**Actions**
+
+| Action                  | API                        | Description                                              |
+| ----------------------- | -------------------------- | -------------------------------------------------------- |
+| `createOrder(reqData)`  | `POST /api/order`          | Place order with `reqData.address`; navigates on success |
+| `getOrderById(orderId)` | `GET /api/order/{orderId}` | Fetch order details                                      |
+
+**State shape**
+
+```javascript
+{
+  order: {
+    orders: [],
+    order: null,
+    loading: false,
+    error: null
+  }
+}
+```
+
+---
+
+## Redux Data Flow
+
+```
+Component (dispatch)
+    ↓
+Thunk Action (Action.js)
+    ↓
+dispatch(REQUEST) → Reducer sets loading
+    ↓
+Axios API call (apiConfig.js, Bearer JWT)
+    ↓
+dispatch(SUCCESS | FAILER) → Reducer updates state
+    ↓
+useSelector in component re-renders
+```
+
+## API Configuration
+
+- Base URL: `http://localhost:5454` (`client/src/config/apiConfig.js`)
+- Requests include `Authorization: Bearer <jwt>` from `localStorage`
+
+## Usage in Components
+
+```javascript
+import { useDispatch, useSelector } from "react-redux";
+import { findProducts } from "../state/product/Action";
+import { getCart, addItemToCart } from "../state/cart/Action";
+import { createOrder } from "../state/order/Action";
+
 const dispatch = useDispatch();
-dispatch(login(userData));
+const { product, cart, order } = useSelector((store) => store);
+
+dispatch(findProducts({ pageNumber: 0, pageSize: 10 }));
+dispatch(getCart());
+dispatch(addItemToCart({ data: { productId, size, quantity } }));
+dispatch(createOrder({ address, navigate }));
 ```
 
-**useSelector Hook**: Used to subscribe to store updates and select state
-
-```javascript
-const { auth } = useSelector((store) => store);
-```
-
-### Benefits of This Redux Implementation
-
-1. **Centralized State**: All authentication state is managed in one place
-2. **Predictable Updates**: State changes follow a strict unidirectional flow
-3. **Debugging**: Redux DevTools can track every state change
-4. **Testability**: Pure reducers and action creators are easy to test
-5. **Separation of Concerns**: UI components are decoupled from business logic
-6. **Scalability**: Easy to add new features and state slices
-
-## Features
-
-- User registration with form validation
-- User login with JWT token authentication
-- Automatic JWT token storage in localStorage
-- User profile fetching with authenticated requests
-- Loading and error state management
-- Logout functionality
-- Responsive modal-based UI using Material-UI
-
-## Technical Details
-
-- Uses Redux for state management
-- Redux Thunk for async actions
-- Axios for API calls
-- Material-UI components for UI
-- React Router for navigation
-- JWT token-based authentication
-
-## Files Added
+## Files Added / Updated
 
 ```
-client/src/auth/AuthModal.jsx
-client/src/auth/LoginForm.jsx
-client/src/auth/RegisterForm.jsx
 client/src/state/store.js
-client/src/state/auth/Action.js
-client/src/state/auth/ActionType.js
-client/src/state/auth/Reducer.js
+client/src/state/product/ActionType.js
+client/src/state/product/Action.js
+client/src/state/product/Reducer.js
+client/src/state/cart/ActionType.js
+client/src/state/cart/Action.js
+client/src/state/cart/Reducer.js
+client/src/state/order/ActionType.js
+client/src/state/order/Action.js
+client/src/state/order/Reducer.js
 ```
 
-## Testing
+## Prerequisites
 
-- Test user registration flow
-- Test user login flow
-- Verify JWT token storage
-- Test user profile retrieval
-- Test logout functionality
-- Verify error handling for failed authentication attempts
+- Backend running on port `5454`
+- User logged in (JWT in `localStorage`) for cart and order endpoints
 
-## Related Issues
+## Getting Started
 
-Closes #[issue-number]
+```bash
+cd client
+npm install
+npm start
+```
