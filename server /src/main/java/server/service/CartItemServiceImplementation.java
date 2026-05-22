@@ -37,14 +37,12 @@ public class CartItemServiceImplementation implements CartItemService{
 
     @Override
     public CartItem updateCartItem(Long userId, Long id, CartItem cartItem) throws CartItemException, UserException {
-
         CartItem item = findCartItemById(id);
         User user = userService.FindUserById(item.getUserId());
-
         if(user.getId().equals(userId)){
             item.setQuantity(cartItem.getQuantity());
             item.setPrice(cartItem.getQuantity()*item.getProduct().getPrice());
-            item.setDiscountedPrice(item.getDiscountedPrice()*item.getQuantity());
+            item.setDiscountedPrice(item.getProduct().getDiscountedPrice()*item.getQuantity());
         }
         return cartItemRepository.save(item);
     }
