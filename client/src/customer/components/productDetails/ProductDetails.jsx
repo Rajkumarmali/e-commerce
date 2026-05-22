@@ -2,10 +2,14 @@ import { Box, Button, Grid, LinearProgress, Rating } from '@mui/material'
 import ProductReviewCart from './ProductReviewCart'
 import { mens_kurta } from '../../../Data/mens_kurta'
 import HomeSectionCard from '../homeSectionCard/HomeSectionCard'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+import { findProductById } from '../../../state/product/Action'
+import { addItemToCart } from '../../../state/cart/Action'
 
 
-const product = {
+const products = {
     name: 'Basic Tee 6-Pack',
     price: '$192',
     href: '#',
@@ -64,19 +68,29 @@ function classNames(...classes) {
 
 
 export default function ProductDetails() {
-
+    const [selectedSize, setSelectSize] = useState("");
     const navigate = useNavigate();
+    const params = useParams();
+    const dispatch = useDispatch();
+
+    const { product } = useSelector(store => store)
 
     const handleAddToCart = () => {
+        const reqData = { productId: params.productId, size: selectedSize, quantity: 1 }
+        dispatch(addItemToCart(reqData))
         navigate('/cart')
     }
+
+    useEffect(() => {
+        dispatch(findProductById(params.productId))
+    }, [params.productId])
 
     return (
         <div className="bg-white lg:px-20">
             <div className="pt-6">
                 <nav aria-label="Breadcrumb">
                     <ol role="list" className="mx-auto flex max-w-2xl items-center space-x-2 px-4 sm:px-6 lg:max-w-7xl lg:px-8">
-                        {product.breadcrumbs.map((breadcrumb) => (
+                        {products.breadcrumbs.map((breadcrumb) => (
                             <li key={breadcrumb.id}>
                                 <div className="flex items-center">
                                     <a href={breadcrumb.href} className="mr-2 text-sm font-medium text-gray-900">
@@ -96,8 +110,8 @@ export default function ProductDetails() {
                             </li>
                         ))}
                         <li className="text-sm">
-                            <a href={product.href} aria-current="page" className="font-medium text-gray-500 hover:text-gray-600">
-                                {product.name}
+                            <a href={products.href} aria-current="page" className="font-medium text-gray-500 hover:text-gray-600">
+                                {products.name}
                             </a>
                         </li>
                     </ol>
@@ -107,13 +121,13 @@ export default function ProductDetails() {
                     <div className="flex flex-col items-center ">
                         <div className='overflow-hidden rounded-lg max-w-[30rem] max-h-[35rem]'>
                             <img
-                                alt={product.images[0].alt}
-                                src={product.images[0].src}
+                                alt={product.product?.alt}
+                                src={product.product?.imageUrl}
                                 className="row-span-2 aspect-3/4 size-full rounded-lg object-cover max-lg:hidden"
                             />
                         </div>
                         <div className='flex flex-wrap space-x-5 justify-center'>
-                            {product.images.map((image) => (
+                            {products.images.map((image) => (
                                 <div className='aspect-h-2 aspect-w-3 overflow-hidden rounded-lg max-w-[5rem] max-h-[5rem] mt-4'>
                                     <img
                                         alt={image.alt}
@@ -127,17 +141,17 @@ export default function ProductDetails() {
                     {/* Product info */}
                     <div className="lg:col-span-1 maxt-auto max-w-2xl px-4 pb-16 sm:px-6 lg:max-w-7xl lg:px-8 lg:pb-24 text-left">
                         <div className="lg:col-span-2 ">
-                            <h1 className="text-lg lg:text-xl font-semibold text-gray-900">Universaloutfit</h1>
-                            <h1 className="text-lg lg:text-xl text-gray-900 opacity-60 pt-1">{product.name}</h1>
+                            <h1 className="text-lg lg:text-xl font-semibold text-gray-900">{product.product?.brand}</h1>
+                            <h1 className="text-lg lg:text-xl text-gray-900 opacity-60 pt-1">{product.product?.title}</h1>
                         </div>
 
                         {/* Options */}
                         <div className="mt-4 lg:row-span-3 lg:mt-0">
                             <h2 className="sr-only">Product information</h2>
                             <div className='flex space-x-5 items-center text-lg lg:text-xl text-gray-900 mt-6 '>
-                                <p className="font-semibold">199</p>
-                                <p className="font-semibold opacity-50 line-through">211</p>
-                                <p className="text-green-600 font-semibold">5% off </p>
+                                <p className="font-semibold">{product.product?.discountedPrice}</p>
+                                <p className="font-semibold opacity-50 line-through">{product.product?.price}</p>
+                                <p className="text-green-600 font-semibold">{product.product?.discountPresent}% off </p>
                             </div>
 
 
@@ -160,7 +174,7 @@ export default function ProductDetails() {
 
                                     <fieldset aria-label="Choose a size" className="mt-4">
                                         <div className="grid grid-cols-4 gap-3">
-                                            {product.sizes.map((size) => (
+                                            {products.sizes.map((size) => (
                                                 <label
                                                     key={size.id}
                                                     aria-label={size.name}
@@ -168,9 +182,10 @@ export default function ProductDetails() {
                                                 >
                                                     <input
                                                         defaultValue={size.id}
-                                                        defaultChecked={size === product.sizes[2]}
+                                                        defaultChecked={size === products.sizes[2]}
                                                         name="size"
                                                         type="radio"
+                                                        onChange={() => setSelectSize(size.name)}
                                                         disabled={!size.inStock}
                                                         className="absolute inset-0 appearance-none focus:outline-none disabled:cursor-not-allowed"
                                                     />
@@ -195,7 +210,7 @@ export default function ProductDetails() {
                                 <h3 className="sr-only">Description</h3>
 
                                 <div className="space-y-6">
-                                    <p className="text-base text-gray-900">{product.description}</p>
+                                    <p className="text-base text-gray-900">{product.product?.description}</p>
                                 </div>
                             </div>
 
@@ -204,7 +219,7 @@ export default function ProductDetails() {
 
                                 <div className="mt-4">
                                     <ul role="list" className="list-disc space-y-2 pl-4 text-sm">
-                                        {product.highlights.map((highlight) => (
+                                        {products.highlights.map((highlight) => (
                                             <li key={highlight} className="text-gray-400">
                                                 <span className="text-gray-600">{highlight}</span>
                                             </li>
@@ -217,7 +232,7 @@ export default function ProductDetails() {
                                 <h2 className="text-sm font-medium text-gray-900">Details</h2>
 
                                 <div className="mt-4 space-y-6">
-                                    <p className="text-sm text-gray-600">{product.details}</p>
+                                    <p className="text-sm text-gray-600">{products.details}</p>
                                 </div>
                             </div>
                         </div>

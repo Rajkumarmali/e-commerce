@@ -1,0 +1,47 @@
+import { api } from "../../config/apiConfig";
+import { ADD_ITEM_TO_CART_FAILER, ADD_ITEM_TO_CART_REQUEST, ADD_ITEM_TO_CART_SUCCESS, GET_CART_FAILER, GET_CART_REQUEST, GET_CART_SUCCESS, REMOVE_CART_ITEM_FAILER, REMOVE_CART_ITEM_REQUEST, REMOVE_CART_ITEM_SUCCESS, UPDATE_CART_ITEM_FAILER, UPDATE_CART_ITEM_REQUEST, UPDATE_CART_ITEM_SUCCESS } from "./ActionType"
+
+
+export const getCart = () => async (dispatch) => {
+    dispatch({ type: GET_CART_REQUEST })
+    try {
+        const { data } = await api.get(`/api/cart`,)
+        dispatch({ type: GET_CART_SUCCESS, payload: data })
+        console.log("cartitem", data);
+    } catch (err) {
+        dispatch({ type: GET_CART_FAILER, payload: err.message })
+    }
+}
+
+export const addItemToCart = (reqData) => async (dispatch) => {
+    dispatch({ type: ADD_ITEM_TO_CART_REQUEST })
+    try {
+        const { data } = await api.post(`/api/cart/add`, reqData)
+        dispatch({ type: ADD_ITEM_TO_CART_SUCCESS, payload: data })
+
+    } catch (err) {
+        dispatch({ type: ADD_ITEM_TO_CART_FAILER, payload: err.message })
+    }
+}
+
+export const removeCartItem = (cartItemId) => async (dispatch) => {
+    dispatch({ type: REMOVE_CART_ITEM_REQUEST })
+    try {
+        const { data } = await api.delete(`/api/cart_item/${cartItemId}`)
+        dispatch({ type: REMOVE_CART_ITEM_SUCCESS, payload: cartItemId })
+    } catch (err) {
+        dispatch({ type: REMOVE_CART_ITEM_FAILER, payload: err.message })
+    }
+}
+
+export const updateCartItem = (reqData) => async (dispatch) => {
+    dispatch({ type: UPDATE_CART_ITEM_REQUEST })
+    try {
+        const { data } = await api.put(`/api/cart_item/${reqData.cartItemId}`, reqData.data)
+        console.log(data);
+        dispatch({ type: UPDATE_CART_ITEM_SUCCESS, payload: data })
+    } catch (err) {
+        dispatch({ type: UPDATE_CART_ITEM_FAILER, payload: err.message })
+    }
+}
+
