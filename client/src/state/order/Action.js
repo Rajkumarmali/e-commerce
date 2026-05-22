@@ -4,9 +4,10 @@ import { CREATE_ORDER_FAILER, CREATE_ORDER_REQUEST, CREATE_ORDER_SUCCESS, GET_OR
 export const createOrder = (reqData) => async (dispatch) => {
     dispatch({ type: CREATE_ORDER_REQUEST })
     try {
-        const { data } = api.post(`/api/order`, reqData.address)
+        console.log("reqData", reqData);
+        const { data } = await api.post(`/api/order`, reqData.address)
         if (data.id) {
-            reqData.navigate({ search: `step-3&order_id=${data.id}` });
+            reqData.navigate({ search: `step=3&order_id=${data.id}` });
         }
         dispatch({ type: CREATE_ORDER_SUCCESS, payload: data })
     } catch (err) {
@@ -17,10 +18,10 @@ export const createOrder = (reqData) => async (dispatch) => {
 export const getOrderById = (orderId) => async (dispatch) => {
     dispatch({ type: GET_ORDER_BY_ID_REQUEST })
     try {
-        const { data } = api.post(`/api/order/${orderId}`)
+        const { data } = await api.get(`/api/order/${orderId}`)
         dispatch({ type: GET_ORDER_BY_ID_REQUEST, payload: data })
+        console.log("orderById", data);
     } catch (err) {
         dispatch({ type: GET_ORDER_BY_ID_FAILER, payload: err.message })
     }
 }
-
