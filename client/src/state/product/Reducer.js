@@ -1,7 +1,7 @@
 import { FIND_PRODUCT_BY_ID_FAILER, FIND_PRODUCT_BY_ID_REQUEST, FIND_PRODUCT_BY_ID_SUCCESS, FIND_PRODUCTS_FAILER, FIND_PRODUCTS_REQUEST, FIND_PRODUCTS_SUCCESS } from "./ActionType"
 
 const initialState = {
-    prodcuts: [],
+    products: [],
     product: null,
     loading: false,
     error: null
@@ -17,7 +17,7 @@ export const customerProductReducer = (state = initialState, action) => {
 
         case FIND_PRODUCTS_SUCCESS:
             return {
-                ...state, loading: false, error: null, prodcuts: action.payload
+                ...state, loading: false, error: null, products: action.payload
             }
 
         case FIND_PRODUCT_BY_ID_SUCCESS:
