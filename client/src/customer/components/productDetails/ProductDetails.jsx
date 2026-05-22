@@ -3,9 +3,10 @@ import ProductReviewCart from './ProductReviewCart'
 import { mens_kurta } from '../../../Data/mens_kurta'
 import HomeSectionCard from '../homeSectionCard/HomeSectionCard'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { findProductById } from '../../../state/product/Action'
+import { addItemToCart } from '../../../state/cart/Action'
 
 
 const products = {
@@ -67,7 +68,7 @@ function classNames(...classes) {
 
 
 export default function ProductDetails() {
-
+    const [selectedSize, setSelectSize] = useState("");
     const navigate = useNavigate();
     const params = useParams();
     const dispatch = useDispatch();
@@ -75,6 +76,8 @@ export default function ProductDetails() {
     const { product } = useSelector(store => store)
 
     const handleAddToCart = () => {
+        const reqData = { productId: params.productId, size: selectedSize, quantity: 1 }
+        dispatch(addItemToCart(reqData))
         navigate('/cart')
     }
 
@@ -182,6 +185,7 @@ export default function ProductDetails() {
                                                         defaultChecked={size === products.sizes[2]}
                                                         name="size"
                                                         type="radio"
+                                                        onChange={() => setSelectSize(size.name)}
                                                         disabled={!size.inStock}
                                                         className="absolute inset-0 appearance-none focus:outline-none disabled:cursor-not-allowed"
                                                     />
