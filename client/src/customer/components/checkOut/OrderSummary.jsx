@@ -5,6 +5,7 @@ import CartItem from '../cart/CartItem'
 import { useDispatch, useSelector } from 'react-redux'
 import { getOrderById } from '../../../state/order/Action'
 import { useLocation, useParams } from 'react-router-dom'
+import { createPayment } from '../../../state/payment/Action'
 
 const OrderSummary = () => {
 
@@ -19,6 +20,10 @@ const OrderSummary = () => {
     useEffect(() => {
         dispatch(getOrderById(orderId));
     }, [])
+
+    const handleCheckOut = () => {
+        dispatch(createPayment(orderId))
+    }
 
     return (
         <div>
@@ -52,7 +57,7 @@ const OrderSummary = () => {
                                     <span className='text-green-600'> ₹{order.order?.totalDiscountedPrice} </span>
                                 </div>
                             </div>
-                            <Button variant='contained' className='w-full mt-5' sx={{ px: "2.5rem", py: '.7rem', bgcolor: '#9155fd' }}>
+                            <Button onClick={handleCheckOut} variant='contained' className='w-full mt-5' sx={{ px: "2.5rem", py: '.7rem', bgcolor: '#9155fd' }}>
                                 CheckOut
                             </Button>
                         </div>
