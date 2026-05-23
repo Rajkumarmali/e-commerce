@@ -90,14 +90,6 @@ public class AuthController {
          return new ResponseEntity<AuthResponse>(authResponse, HttpStatus.CREATED);
     }
 
-    @GetMapping("/userProfile")
-    public ResponseEntity<User> userProfile(HttpServletRequest request) throws UserException {
-        String jwt = request.getHeader(JwtConstant.JWT_HEADER);
-        System.out.println(jwt);
-        User user = userService.findUserProfileByJwt(jwt);
-        return new ResponseEntity<>(user,HttpStatus.ACCEPTED);
-    }
-
     private Authentication authenticate(String username, String password) {
         UserDetails userDetails = customeUserService.loadUserByUsername(username);
         if(userDetails == null){
