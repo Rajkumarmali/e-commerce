@@ -1,5 +1,5 @@
 import { api } from "../../config/apiConfig";
-import { FIND_PRODUCT_BY_ID_FAILER, FIND_PRODUCT_BY_ID_REQUEST, FIND_PRODUCT_BY_ID_SUCCESS, FIND_PRODUCTS_FAILER, FIND_PRODUCTS_REQUEST, FIND_PRODUCTS_SUCCESS } from "./ActionType";
+import { CREATE_PRODUCT_FAILER, CREATE_PRODUCT_REQUEST, CREATE_PRODUCT_SUCCESS, DELETE_PRODUCT_REQUEST, DELETE_PRODUCT_SUCCESS, FIND_PRODUCT_BY_ID_FAILER, FIND_PRODUCT_BY_ID_REQUEST, FIND_PRODUCT_BY_ID_SUCCESS, FIND_PRODUCTS_FAILER, FIND_PRODUCTS_REQUEST, FIND_PRODUCTS_SUCCESS } from "./ActionType";
 
 export const findProducts = (reqData) => async (dispatch) => {
     dispatch({ type: FIND_PRODUCTS_REQUEST })
@@ -36,5 +36,26 @@ export const findProductById = (productId) => async (dispatch) => {
         console.log("product:", data)
     } catch (err) {
         dispatch({ type: FIND_PRODUCT_BY_ID_FAILER, payload: err.message })
+    }
+}
+
+export const createProduct = (product) => async (dispatch) => {
+    console.log(product)
+    dispatch({ type: CREATE_PRODUCT_REQUEST })
+    try {
+        const { data } = await api.post('/api/admin/products/', product)
+        dispatch({ type: CREATE_PRODUCT_SUCCESS, payload: data })
+        console.log(data)
+    } catch (err) {
+        dispatch({ type: CREATE_PRODUCT_FAILER, payload: err.message })
+    }
+}
+export const deleteProduct = (productId) => async (dispatch) => {
+    dispatch({ type: DELETE_PRODUCT_REQUEST })
+    try {
+        const { data } = await api.delete(`/api/admin/products/delete/${productId}`)
+        dispatch({ type: DELETE_PRODUCT_SUCCESS, payload: productId })
+    } catch (err) {
+        dispatch({ type: DELETE_PRODUCT_REQUEST, payload: err.message })
     }
 }

@@ -1,4 +1,4 @@
-import { FIND_PRODUCT_BY_ID_FAILER, FIND_PRODUCT_BY_ID_REQUEST, FIND_PRODUCT_BY_ID_SUCCESS, FIND_PRODUCTS_FAILER, FIND_PRODUCTS_REQUEST, FIND_PRODUCTS_SUCCESS } from "./ActionType"
+import { DELETE_PRODUCT_SUCCESS, FIND_PRODUCT_BY_ID_FAILER, FIND_PRODUCT_BY_ID_REQUEST, FIND_PRODUCT_BY_ID_SUCCESS, FIND_PRODUCTS_FAILER, FIND_PRODUCTS_REQUEST, FIND_PRODUCTS_SUCCESS } from "./ActionType"
 
 const initialState = {
     products: [],
@@ -23,6 +23,17 @@ export const customerProductReducer = (state = initialState, action) => {
         case FIND_PRODUCT_BY_ID_SUCCESS:
             return {
                 ...state, loading: false, error: null, product: action.payload
+            }
+
+        case DELETE_PRODUCT_SUCCESS:
+            return {
+                ...state,
+                loading: false,
+                error: null,
+                products: {
+                    ...state.products,
+                    content: state.products.content.filter((item) => item.id !== action.payload)
+                }
             }
 
         case FIND_PRODUCTS_FAILER:
